@@ -1,22 +1,5 @@
-# E-Wallet Database Design
-
-### Entity Relationship Diagram
-
-![Alt text](erd.drawio.png?raw=true "Entity Relationship Diagram")
-
-### Assumptions
-
-1. One wallet per user
-2. Password record that got saved in the database already saved in hashed
-3. Reward from winning game does not considered as top up
-
-## Data Definition Language
-
-```sql
--- 1. Make new database wallet_db
 CREATE DATABASE wallet_db;
 
--- 2. Make new users table
 CREATE TABLE users (
   id BIGSERIAL PRIMARY KEY,
   user_name VARCHAR NOT NULL,
@@ -29,7 +12,6 @@ CREATE TABLE users (
   deleted_at TIMESTAMP
 );
 
--- 3. Make new wallets table
 CREATE TABLE wallets (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL,
@@ -40,7 +22,6 @@ CREATE TABLE wallets (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- 4. Make new source_funds table
 CREATE TABLE source_funds (
   id BIGSERIAL PRIMARY KEY,
   fund_category VARCHAR NOT NULL,
@@ -49,7 +30,6 @@ CREATE TABLE source_funds (
   deleted_at TIMESTAMP
 );
 
--- 5. Make new game_chances table
 CREATE TABLE game_chances (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL,
@@ -60,7 +40,6 @@ CREATE TABLE game_chances (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- 6. Make new transaction_histories table
 CREATE TABLE transaction_histories (
   id BIGSERIAL PRIMARY KEY,
   sender_id BIGINT,
@@ -77,7 +56,6 @@ CREATE TABLE transaction_histories (
   FOREIGN KEY (source_fund_id) REFERENCES source_funds(id)
 );
 
--- 7. Make new token_passwords table
 CREATE TABLE token_passwords (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL,
@@ -90,12 +68,21 @@ CREATE TABLE token_passwords (
   deleted_at TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
-```
 
-## Data Manipulation Language
+SELECT * FROM wallets;
+SELECT * FROM source_funds;
+SELECT * FROM game_chances;
+SELECT * FROM users;
+SELECT * FROM transaction_histories;
+SELECT * FROM token_passwords;
 
-```sql
--- 1. Seeding users table with user data
+DROP TABLE IF EXISTS wallets;
+DROP TABLE IF EXISTS source_funds;
+DROP TABLE IF EXISTS game_chances;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS transaction_histories;
+DROP TABLE IF EXISTS token_passwords;
+
 INSERT INTO users(user_name, birthdate, email, user_password, phone, created_at, updated_at)
 VALUES
 ('Adit', '2001-06-14', 'adit@abc.com', 'N0q0kt65O4uhY4c', '081290882428', NOW(), NOW()),
@@ -105,7 +92,6 @@ VALUES
 ('Evan', '2003-12-15', 'evan@xyz.com', 'gUe2Cwb4yIyzgum', '081290882424', NOW(), NOW())
 ;
 
--- 2. Seeding source_funds table with fund category that is supported
 INSERT INTO source_funds(fund_category, created_at, updated_at)
 VALUES
 ('Bank Transfer', NOW(), NOW()),
@@ -114,7 +100,6 @@ VALUES
 ('Gacha Wins', NOW(), NOW())
 ;
 
--- 3. Seeding wallets table with wallets balance data for each user
 INSERT INTO wallets(user_id, balance, created_at, updated_at)
 VALUES
 (1, 3568000, NOW(), NOW()),
@@ -124,7 +109,6 @@ VALUES
 (5, 1655000, NOW(), NOW())
 ;
 
--- 4. Seeding game_chances table with user_chance data
 INSERT INTO game_chances(user_id, user_chance, created_at, updated_at)
 VALUES
 (1, 6, NOW(), NOW()),
@@ -134,10 +118,9 @@ VALUES
 (5, 2, NOW(), NOW())
 ;
 
--- 5. Seeding transaction_histories table with transaction data
 INSERT INTO transaction_histories(sender_id, recipient_id, description, amount, source_fund_id, transaction_time, created_at, updated_at)
 VALUES
-(1, 1, 'Bank Top Up', 2500000, 1, '2021-12-03 20:31:09', '2021-12-03 20:31:09', '2021-12-03 20:31:09'),
+(NULL, 1, 'Bank Top Up', 2500000, 1, '2021-12-03 20:31:09', '2021-12-03 20:31:09', '2021-12-03 20:31:09'),
 (2, 2, 'Bank Top Up', 1000000, 1, '2021-12-20 20:34:22', '2021-12-20 20:34:22', '2021-12-20 20:34:22'),
 (3, 3, 'Bank Top Up', 1500000, 1, '2022-02-13 09:10:21', '2022-02-13 09:10:21', '2022-02-13 09:10:21'),
 (4, 4, 'Bank Top Up', 500000, 1, '2022-04-19 12:28:41', '2022-04-19 12:28:41', '2022-04-19 12:28:41'),
@@ -174,75 +157,13 @@ VALUES
 (2, 1, 'Wallet Transfer', 10000, 3, '2023-09-17 04:53:02', '2023-09-17 04:53:02', '2023-09-17 04:53:02')
 ;
 
--- 6. Seeding token_passwords table with attempt to recover passwords
 INSERT INTO token_passwords(user_id, recover_token, is_used, is_expired, expiration_time, created_at, updated_at, deleted_at)
 VALUES
 (1, 'oQfCbV', false, true, '2022-01-17 22:43:59', '2022-01-17 21:43:59', '2022-01-17 22:43:59', '2022-01-17 22:43:59'),
 (1, 'GBUxX6', true, false, '2022-01-17 23:44:00', '2022-01-17 22:44:00', '2022-01-17 23:45:37', '2022-01-17 23:45:37'),
 (5, 'EQ1Ra3', true, false, '2022-10-06 14:08:31', '2022-10-06 13:08:31', '2022-10-06 13:09:31', '2022-10-06 13:09:31')
 ;
-```
 
-## Data Query Language
 
-```sql
--- 1. Get all of the transaction history data from this year. Order the data from the oldest to the latest
-SELECT 
-	*
-FROM
-	transaction_histories th
-WHERE EXTRACT(YEAR FROM transaction_time) = '2023'
-ORDER BY transaction_time ASC;
 
--- 2. Get the amount of top up transactions data on June last year, group them by source of funds. Order the data by the smallest amount of money to the largest
-SELECT 
-	description AS source_of_funds,
-	SUM(amount) AS sum_amount
-FROM
-	transaction_histories th
-WHERE 
-	EXTRACT(YEAR FROM transaction_time) = '2022' AND
-	EXTRACT(MONTH FROM transaction_time) = '6' AND
-	RIGHT(description, 6) = 'Top Up'
-GROUP BY description
-ORDER BY sum_amount ASC;
 
--- 3. Get all the users data, along with the total money in their wallet. Order the data by the largest amount of money to the smallest
-SELECT
-	u.id,
-	u.user_name,
-	u.birthdate,
-	u.email,
-	u.user_password,
-	u.phone,
-	w.balance
-FROM
-	users u
-	LEFT JOIN wallets w ON u.id = w.user_id
-ORDER BY w.balance DESC;
-```
-
-## Database Transaction
-
-1. `Top up and transfer transaction from the same account that happen at the same time` may cause a database transaction `lost update problems`, this transaction table below will illustrate how that could happen
-```
-Time|       Top Up Tx        |   x   |       Transfer Tx      |   y   | balance |
-t1  |          ...           |   -   |         BEGIN          |   -   |  3000   |
-t2  |         BEGIN          |   -   |          ...           |   -   |  3000   |
-t3  |          ...           |   -   | READ balance, put to y | 3000  |  3000   |
-t4  | READ balance, put to x | 3000  |	        ...           |	3000  |  3000   |
-t5  |      x = x + 1000      | 4000  |	        ...           | 3000  |  3000   |
-t6  |          ...           | 4000  |	     y = y - 500      | 2500  |  2500   |
-t7  |  UPDATE balance = x    | 4000  |          ...           |	2500  |  2500   |
-t8  |         COMMIT         |	 -   |          ...           | 2500  |  2500   |
-t9  |          ...           |   -   |   UPDATE balance = y   |	2500  |  2500   |
-t10 |          ...           |   -   |         COMMIT         |   -   |	 2500   |
-```
-
-from the table above we know that transaction 1 is doing a top up and transaction 2 is transfering, transaction 1 and 2 read the balance at the same time, then transaction 1 updates the data followed by transaction 2. At the end, instead of having 4000 as the final balance, the account will have 2500 as the final balance
-
-- initial balance is 3000
-- balance got increased by top-up of 1000
-- then deducted by transfer of 500
-
-`The update from top-up transaction is lost, hence lost update problems happen`
